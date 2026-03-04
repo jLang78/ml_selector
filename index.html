@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ML Algorithm Selector</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0a0a14;
+    color: #e0e0e8;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  }
+  .container { max-width: 820px; margin: 0 auto; padding: 32px 20px; }
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 {
+    font-size: 32px; font-weight: 800; color: #fff;
+    font-family: 'Space Mono', 'Courier New', monospace;
+    letter-spacing: -0.02em;
+  }
+  .header p { font-size: 15px; color: #606078; margin-top: 8px; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .tab-btn {
+    padding: 8px 16px; border-radius: 8px; border: 2px solid transparent;
+    background: #12121f; color: #707088; font-weight: 500; font-size: 13px;
+    cursor: pointer; transition: all 0.2s ease;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif; white-space: nowrap;
+  }
+  .tab-btn.active { font-weight: 700; }
+
+  .tree-header {
+    padding: 16px 20px; background: #0d0d1a; border-radius: 14px;
+    margin-bottom: 20px; border: 1px solid #1e1e30;
+  }
+  .tree-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .tree-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+  }
+  .tree-title {
+    font-size: 22px; font-weight: 800; color: #f0f0f0;
+    font-family: 'Space Mono', 'Courier New', monospace;
+  }
+  .tree-sub { font-size: 14px; color: #808098; margin-left: 22px; font-style: italic; }
+
+  .question {
+    font-size: 16px; font-weight: 700; color: #e8e8f0;
+    padding: 14px 18px; background: #ffffff05; border-radius: 12px;
+    margin-bottom: 10px;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  }
+  .question.root { font-size: 18px; background: #ffffff08; }
+
+  .branches { display: flex; flex-wrap: wrap; gap: 8px; margin-left: 20px; margin-bottom: 4px; }
+  .branch-btn {
+    padding: 10px 18px; border-radius: 10px; border: 2px solid #333340;
+    background: #1a1a2e; color: #a0a0b8; font-weight: 500; font-size: 14px;
+    cursor: pointer; transition: all 0.2s ease; text-align: left; line-height: 1.4;
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  }
+  .branch-btn.active { font-weight: 700; }
+
+  .subtree { margin-left: 20px; padding-left: 16px; margin-top: 6px; border-left: 2px dashed; }
+
+  .answer-card {
+    border-radius: 14px; padding: 20px 24px; margin-top: 8px; border-width: 2px; border-style: solid;
+  }
+  .answer-label {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .answer-name {
+    font-size: 22px; font-weight: 800; color: #f0f0f0; line-height: 1.3;
+    font-family: 'Space Mono', 'Courier New', monospace;
+  }
+  .answer-why { margin-top: 14px; font-size: 14px; color: #c8c8d0; line-height: 1.65; }
+  .answer-tags { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .tag-scale {
+    font-size: 12px; padding: 5px 12px; border-radius: 20px;
+    background: #ffffff10; color: #a0a0b0; border: 1px solid #ffffff15;
+  }
+  .tag-warn {
+    font-size: 12px; padding: 5px 12px; border-radius: 20px;
+    background: #ef444415; color: #fca5a5; border: 1px solid #ef444430;
+  }
+
+  .footer {
+    margin-top: 40px; padding: 18px 22px; background: #12121f;
+    border-radius: 12px; border: 1px solid #1e1e30;
+  }
+  .footer-title {
+    font-size: 14px; font-weight: 700; color: #f59e0b; margin-bottom: 8px;
+    font-family: 'Space Mono', 'Courier New', monospace;
+  }
+  .footer-text { font-size: 13px; color: #909098; line-height: 1.8; }
+  .footer-text strong.warn { color: #fca5a5; }
+  .footer-text strong.info { color: #93c5fd; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+const TREES = {
+  supervised: {
+    title: "Supervised Learning", subtitle: "You have labeled data (X → Y)", color: "#f59e0b",
+    root: {
+      q: "What are you predicting?",
+      branches: [
+        { label: "A continuous number", node: {
+          q: "Is the relationship likely linear?",
+          branches: [
+            { label: "Yes, roughly linear", node: {
+              q: "Are there many correlated features?",
+              branches: [
+                { label: "No, features are independent", node: { answer: "Linear Regression", why: "The baseline. Highly interpretable, extrapolates linear trends, very fast to train O(n).", scaling: "Must scale data", watch: "Cannot capture nonlinear patterns" }},
+                { label: "Yes, multicollinearity risk", node: {
+                  q: "Do you want automatic feature selection?",
+                  branches: [
+                    { label: "Yes, drop useless features", node: { answer: "Lasso (L1)", why: "Shrinks coefficients to exactly zero → built-in feature selection.", scaling: "Must scale data", watch: "Picks one feature arbitrarily from correlated groups" }},
+                    { label: "No, keep all but reduce impact", node: { answer: "Ridge (L2)", why: "Shrinks coefficients toward zero but never removes them. Handles multicollinearity gracefully.", scaling: "Must scale data", watch: "No feature elimination" }},
+                    { label: "Both — balance it", node: { answer: "ElasticNet", why: "Combines L1 + L2 penalties. Best of both worlds for wide data (features > rows).", scaling: "Must scale data", watch: "Extra hyperparameter (l1_ratio) to tune" }}
+                  ]
+                }}
+              ]
+            }},
+            { label: "No, likely nonlinear", node: {
+              q: "How large is your dataset?",
+              branches: [
+                { label: "Small (< 10K rows)", node: { answer: "Random Forest Regressor", why: "Hard to overfit thanks to bagging. Handles nonlinearity without scaling. Good out-of-the-box.", scaling: "No scaling needed", watch: "Cannot extrapolate beyond training range — will flatline on unseen trends" }},
+                { label: "Medium to Large (10K–100K+)", node: {
+                  q: "Do you have many categorical features?",
+                  branches: [
+                    { label: "Yes, heavy categoricals", node: { answer: "CatBoost", why: "Handles categories natively (no one-hot encoding). SOTA for tabular data with categoricals.", scaling: "No scaling needed", watch: "Slower to train than LightGBM" }},
+                    { label: "Mostly numeric", node: { answer: "LightGBM", why: "Boosting reduces bias. Significantly faster than XGBoost on large datasets. Histogram-based splitting.", scaling: "No scaling needed", watch: "Can overfit on small data. Trees cannot extrapolate." }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }},
+        { label: "A category / class", node: {
+          q: "Is the output binary or multi-class?",
+          branches: [
+            { label: "Binary (Yes/No)", node: {
+              q: "What matters most?",
+              branches: [
+                { label: "Interpretability / Regulation", node: { answer: "Logistic Regression", why: "Well-calibrated probabilities ('60% risk'). Coefficients directly explain feature impact. Gold standard for regulated industries.", scaling: "Must scale data", watch: "Assumes linear decision boundary" }},
+                { label: "Visual explainability", node: { answer: "Decision Tree (single)", why: "Produces visualizable rules ('If Age > 50 AND Income < 30K…'). No scaling needed.", scaling: "No scaling needed", watch: "Overfits easily. Use max_depth constraint." }},
+                { label: "Best performance", node: {
+                  q: "Is the dataset imbalanced (e.g., fraud)?",
+                  branches: [
+                    { label: "Yes, heavily imbalanced", node: { answer: "XGBoost + scale_pos_weight (or SMOTE + LightGBM)", why: "scale_pos_weight adjusts for class imbalance. Alternatively, use SMOTE oversampling or reframe as Anomaly Detection (Isolation Forest).", scaling: "No scaling needed", watch: "Accuracy is meaningless here — use F1, Precision-Recall AUC instead" }},
+                    { label: "No, roughly balanced", node: { answer: "XGBoost / LightGBM / CatBoost", why: "Boosting ensembles dominate tabular classification. Stack all three for maximum F1.", scaling: "No scaling needed", watch: "Tune carefully — many hyperparameters" }}
+                  ]
+                }},
+                { label: "Small data + complex boundary", node: { answer: "SVM (Support Vector Machine)", why: "Kernel trick projects data to higher dimensions. Effective on small, complex datasets.", scaling: "Must scale data", watch: "Scales O(n³) — unusable on large data. Memory hungry." }}
+              ]
+            }},
+            { label: "Multi-class", node: {
+              q: "Are classes mutually exclusive?",
+              branches: [
+                { label: "Yes (pick exactly one)", node: {
+                  q: "Is it text/sentiment data?",
+                  branches: [
+                    { label: "Yes, text classification", node: { answer: "Naive Bayes", why: "Assumes feature independence. Surprisingly effective for spam/text classification. Very fast.", scaling: "No scaling needed", watch: "Independence assumption is often violated — still works in practice" }},
+                    { label: "No, tabular data", node: { answer: "LightGBM / CatBoost (multi-class mode)", why: "Same boosting power, extended to multi-class via softmax or one-vs-rest internally.", scaling: "No scaling needed", watch: "Training time increases with number of classes" }}
+                  ]
+                }},
+                { label: "No (can belong to many)", node: { answer: "Multi-label Classification (Binary Relevance / Classifier Chains)", why: "Train one binary classifier per label. Classifier chains capture label dependencies.", scaling: "Depends on base model", watch: "Label correlation is lost with Binary Relevance" }}
+              ]
+            }}
+          ]
+        }},
+        { label: "The next value in a sequence", node: {
+          q: "What kind of time series?",
+          branches: [
+            { label: "Single series, strong trend/seasonality", node: { answer: "ARIMA / SARIMA", why: "Mathematical perfection for simple linear trends with seasonality. Low resource cost.", scaling: "Series must be stationary (differencing)", watch: "Fails on nonlinear patterns or external regressors" }},
+            { label: "Business data with holidays/missing values", node: { answer: "Prophet (Facebook)", why: "Handles missing data, holidays, and trend shifts exceptionally. Interpretable components.", scaling: "No scaling needed", watch: "Not great for high-frequency (sub-daily) data" }},
+            { label: "Tabular features + time component", node: { answer: "LightGBM / XGBoost with Lag Features", why: "Frame as regression: create lag_1, lag_7, rolling_mean features. Captures nonlinear interactions better than ARIMA.", scaling: "No scaling needed", watch: "You must engineer the lag features yourself. Cannot extrapolate beyond training range." }},
+            { label: "Complex long-range sequences (lots of data)", node: { answer: "LSTM / GRU (or Temporal Fusion Transformer)", why: "LSTMs capture long-term dependencies. TFT handles multivariate forecasting of thousands of related series (e.g., retail SKUs).", scaling: "Must scale data", watch: "Needs GPU + large data. Much harder to tune than trees." }}
+          ]
+        }}
+      ]
+    }
+  },
+  unsupervised: {
+    title: "Unsupervised Learning", subtitle: "No labels — discover hidden structure", color: "#8b5cf6",
+    root: {
+      q: "What's your goal?",
+      branches: [
+        { label: "Group similar data points (Clustering)", node: {
+          q: "What shape are the clusters?",
+          branches: [
+            { label: "Spherical, roughly equal size", node: { answer: "K-Means", why: "Fast and simple. The default starting point for clustering.", scaling: "Must scale data", watch: "You must specify K upfront. Sensitive to outliers. Use Elbow Method or Silhouette Score to find K." }},
+            { label: "Irregular / unknown shapes, noise present", node: { answer: "DBSCAN / OPTICS", why: "Density-based: finds 'banana-shaped' clusters. Automatically detects outliers as noise points. No need to specify K.", scaling: "Must scale data", watch: "Struggles with varying-density clusters. OPTICS handles this better." }},
+            { label: "Overlapping / fuzzy boundaries", node: { answer: "Gaussian Mixture Model (GMM)", why: "Probabilistic soft assignment — each point gets a probability of belonging to each cluster. Good when boundaries are blurry.", scaling: "Must scale data", watch: "Assumes Gaussian-shaped clusters. Need to specify number of components." }}
+          ]
+        }},
+        { label: "Reduce dimensions / visualise", node: {
+          q: "Is the reduction for…",
+          branches: [
+            { label: "Preprocessing / noise removal", node: { answer: "PCA (Principal Component Analysis)", why: "Projects onto orthogonal axes of maximum variance. Essential before KNN/K-Means on high-dim data.", scaling: "Must scale data", watch: "Linear only — misses nonlinear structure" }},
+            { label: "2D/3D visualisation of clusters", node: { answer: "t-SNE / UMAP", why: "Preserves local neighbor structure. UMAP is faster and preserves more global structure than t-SNE.", scaling: "Must scale data", watch: "Non-deterministic. Don't interpret distances between clusters — only within-cluster structure is meaningful." }},
+            { label: "Supervised dim. reduction", node: { answer: "LDA (Linear Discriminant Analysis)", why: "Maximises class separation (not just variance like PCA). Needs labels, so technically supervised.", scaling: "Must scale data", watch: "Limited to (n_classes - 1) dimensions. Assumes Gaussian distributions." }}
+          ]
+        }},
+        { label: "Find anomalies / outliers", node: {
+          q: "What kind of anomaly detection?",
+          branches: [
+            { label: "Tabular data, general outliers", node: { answer: "Isolation Forest", why: "Randomly partitions data — outliers are 'isolated' with fewer cuts than normal points. Very efficient, low resource.", scaling: "No scaling needed", watch: "Contamination parameter needs tuning" }},
+            { label: "I have 'normal' data, detect anything new", node: { answer: "One-Class SVM", why: "Learns a tight boundary around 'normal' data. Anything outside = anomaly. Good for novelty detection.", scaling: "Must scale data", watch: "High resource intensity. Doesn't scale well." }}
+          ]
+        }}
+      ]
+    }
+  },
+  selfsupervised: {
+    title: "Self-Supervised Learning", subtitle: "Generate labels from the data itself", color: "#06b6d4",
+    root: {
+      q: "What type of data?",
+      branches: [
+        { label: "Text / Language", node: {
+          q: "What's the pretraining objective?",
+          branches: [
+            { label: "Understand context (bidirectional)", node: { answer: "Masked Language Modelling (BERT-style)", why: "Mask random tokens → predict them from surrounding context. Learns deep bidirectional representations.", scaling: "Tokenisation + embeddings", watch: "Great for classification/NER/QA but not natural text generation" }},
+            { label: "Generate text (autoregressive)", node: { answer: "Next Token Prediction (GPT-style)", why: "Predict the next word given all previous words. Scales remarkably well. Powers LLMs.", scaling: "Tokenisation + embeddings", watch: "Unidirectional — can't 'look ahead' during training" }},
+            { label: "Both directions + generation", node: { answer: "Seq2Seq Denoising (T5/BART-style)", why: "Corrupt input → reconstruct original. Combines understanding + generation in one model.", scaling: "Tokenisation + embeddings", watch: "Encoder-decoder is more complex to fine-tune" }}
+          ]
+        }},
+        { label: "Images / Vision", node: {
+          q: "What approach?",
+          branches: [
+            { label: "Learn without negative pairs", node: { answer: "Masked Autoencoders (MAE)", why: "Mask 75% of image patches → reconstruct. Extremely data-efficient. The 'BERT for images'.", scaling: "Patch-based tokenisation", watch: "Requires large ViT backbone for best results" }},
+            { label: "Contrastive learning", node: { answer: "SimCLR / MoCo / DINO", why: "Pull augmented views of same image together, push different images apart. Learns robust representations.", scaling: "Heavy augmentations needed", watch: "SimCLR needs huge batch sizes. MoCo/DINO are more memory efficient." }}
+          ]
+        }},
+        { label: "Multimodal (Text + Images)", node: { answer: "CLIP / SigLIP", why: "Contrastive learning across modalities — match images with text descriptions. Enables zero-shot classification.", scaling: "Massive paired datasets needed", watch: "Learns correlations, not causation. Can inherit dataset biases." }}
+      ]
+    }
+  },
+  semisupervised: {
+    title: "Semi-Supervised Learning", subtitle: "Few labels + lots of unlabeled data", color: "#10b981",
+    root: {
+      q: "What type of data do you have?",
+      branches: [
+        { label: "Tabular / Graph-structured", node: {
+          q: "How is the data connected?",
+          branches: [
+            { label: "Points have natural neighborhood structure", node: { answer: "Label Spreading / Label Propagation", why: "Graph-based: 'spreads' labels from known points to neighbors based on density. Simple and effective.", scaling: "Must scale data", watch: "Assumes nearby points share labels — fails if classes are interleaved" }},
+            { label: "Explicit graph/network (social, citation)", node: { answer: "Graph Neural Networks (GCN, GAT)", why: "Message-passing: each node aggregates features from neighbors. Naturally semi-supervised.", scaling: "Feature normalisation helps", watch: "Over-smoothing with too many layers — deep GNNs lose node distinction" }}
+          ]
+        }},
+        { label: "Images", node: {
+          q: "How much unlabeled data?",
+          branches: [
+            { label: "Moderate (10x–100x labeled)", node: { answer: "FixMatch / MixMatch", why: "Combines consistency regularisation (augmented views should predict the same) with pseudo-labeling on confident predictions.", scaling: "Standard image preprocessing", watch: "Confirmation bias: wrong pseudo-labels compound errors" }},
+            { label: "Massive (1000x+ labeled)", node: { answer: "Self-Training with Pre-trained Backbone", why: "Fine-tune a self-supervised model (MAE/DINO) on your few labels. The pretrained features do the heavy lifting.", scaling: "Match pretrained model's preprocessing", watch: "Domain gap: if your data is very different from pretraining data, features may not transfer" }}
+          ]
+        }},
+        { label: "Text", node: { answer: "Fine-tune a Pre-trained LLM (BERT/GPT)", why: "The LLM already learned language structure from massive unlabeled text. Your few labels just steer it. This IS semi-supervised learning in practice.", scaling: "Tokenisation + embeddings", watch: "Few-shot prompting may beat fine-tuning if you have < 100 labels" }}
+      ]
+    }
+  },
+  reinforcement: {
+    title: "Reinforcement Learning", subtitle: "Agent → Action → Environment → Reward", color: "#ef4444",
+    root: {
+      q: "What kind of action space?",
+      branches: [
+        { label: "Discrete (finite choices: up/down/left/right)", node: {
+          q: "How complex is the state?",
+          branches: [
+            { label: "Simple / small state space", node: { answer: "Q-Learning (tabular)", why: "Stores a Q-value table for every (state, action) pair. Guaranteed to converge. The RL 'Hello World'.", scaling: "N/A", watch: "Impossible if state space is large (curse of dimensionality)" }},
+            { label: "Complex / high-dimensional (images, etc.)", node: { answer: "DQN (Deep Q-Network)", why: "Neural network approximates the Q-table. Off-policy: can learn from old experiences (replay buffer).", scaling: "Normalise state inputs", watch: "Overestimates Q-values. Use Double DQN or Dueling DQN to fix." }}
+          ]
+        }},
+        { label: "Continuous (e.g., motor torques, steering angle)", node: {
+          q: "What matters most?",
+          branches: [
+            { label: "Stability + general purpose", node: { answer: "PPO (Proximal Policy Optimization)", why: "Policy gradient method. Clips updates to prevent catastrophic changes. The default for robotics, games, RLHF.", scaling: "Normalise observations + rewards", watch: "Sample-inefficient — needs millions of interactions" }},
+            { label: "Sample efficiency (real-world, can't sim)", node: { answer: "SAC (Soft Actor-Critic)", why: "Off-policy + entropy bonus encourages exploration. Much more sample-efficient than PPO.", scaling: "Normalise observations + rewards", watch: "Harder to tune. Entropy coefficient is critical." }},
+            { label: "Multi-agent or competitive", node: { answer: "MAPPO / Self-Play", why: "Multi-agent PPO or self-play (agent trains against copies of itself). Used for game AI and cooperative robotics.", scaling: "Centralised critic, decentralised actors", watch: "Non-stationary: other agents are changing too" }}
+          ]
+        }},
+        { label: "I don't have a simulator / reward function", node: {
+          q: "What do you have instead?",
+          branches: [
+            { label: "Expert demonstrations", node: { answer: "Imitation Learning / Behavioural Cloning", why: "Learn a policy directly from expert trajectories. No reward engineering needed.", scaling: "Match expert's state representation", watch: "Distributional shift: agent drifts into states the expert never visited" }},
+            { label: "Human preferences / rankings", node: { answer: "RLHF (RL from Human Feedback)", why: "Train a reward model from human comparisons, then optimise policy against it. Powers ChatGPT-style alignment.", scaling: "Reward model training is the bottleneck", watch: "Reward hacking: agent exploits the reward model's blind spots" }}
+          ]
+        }}
+      ]
+    }
+  },
+  deeplearning: {
+    title: "Deep Learning", subtitle: "Neural networks — when & which architecture", color: "#ec4899",
+    root: {
+      q: "What type of input data?",
+      branches: [
+        { label: "Images / Spatial grids", node: {
+          q: "What's the task?",
+          branches: [
+            { label: "Classification (what is this?)", node: { answer: "CNN (ResNet / EfficientNet) or ViT", why: "Convolutions capture spatial hierarchy: edges → shapes → objects. ViT uses attention on patches, better with large data.", scaling: "Normalise pixels, augment heavily", watch: "CNNs need less data than ViT. ViT wins at scale." }},
+            { label: "Object detection (where + what?)", node: { answer: "YOLO / DETR", why: "YOLO: real-time, single-pass detection. DETR: transformer-based, no anchor boxes, cleaner architecture.", scaling: "Resize + normalise", watch: "YOLO is faster; DETR is more accurate on complex scenes" }},
+            { label: "Segmentation (pixel-level labels)", node: { answer: "U-Net / Mask R-CNN / SAM", why: "U-Net: encoder-decoder with skip connections, great for medical imaging. SAM: foundation model for any segmentation.", scaling: "Patch-based for large images", watch: "Annotation is extremely expensive for segmentation" }},
+            { label: "Generation (create new images)", node: { answer: "Diffusion Models (Stable Diffusion) / GANs", why: "Diffusion: iteratively denoise random noise into images. Higher quality + more stable training than GANs. GANs: faster inference.", scaling: "Latent space encoding", watch: "Diffusion is slow at inference. GANs have mode collapse risk." }}
+          ]
+        }},
+        { label: "Text / Sequences", node: {
+          q: "What's the task?",
+          branches: [
+            { label: "Understanding (classify, extract, QA)", node: { answer: "BERT / RoBERTa (encoder-only Transformer)", why: "Bidirectional attention captures full context. Fine-tune on your task with few labels.", scaling: "Tokenisation", watch: "Max 512 tokens typically. Use Longformer for longer docs." }},
+            { label: "Generation (write, summarise, chat)", node: { answer: "GPT / LLaMA (decoder-only Transformer)", why: "Autoregressive generation. Scale = capability. The architecture behind all modern LLMs.", scaling: "Tokenisation + context window management", watch: "Hallucination. Cost at scale. Alignment is critical." }},
+            { label: "Translation / transformation", node: { answer: "T5 / BART (encoder-decoder Transformer)", why: "Full seq-to-seq: encode input → decode output. Natural for translation, summarisation, reformulation.", scaling: "Tokenisation", watch: "Slower than decoder-only for generation tasks" }}
+          ]
+        }},
+        { label: "Tabular / Structured", node: { answer: "Usually DON'T use deep learning", why: "Gradient Boosted Trees (XGBoost/LightGBM/CatBoost) almost always beat neural nets on tabular data. MLPs can work but are rarely worth the extra complexity.", scaling: "If you must: use TabNet or FT-Transformer", watch: "Deep learning on tabular data is an active research area — trees still win most benchmarks" }},
+        { label: "Audio / Speech", node: {
+          q: "What's the task?",
+          branches: [
+            { label: "Speech to text", node: { answer: "Whisper (OpenAI)", why: "Transformer trained on 680K hours. Multilingual, robust to noise. The current standard.", scaling: "Mel spectrogram preprocessing", watch: "Large model = slow. Distilled versions exist." }},
+            { label: "Audio classification / embeddings", node: { answer: "Audio Spectrogram Transformer / wav2vec", why: "Treat audio as a spectrogram image (AST) or learn directly from waveforms (wav2vec). Self-supervised pretraining.", scaling: "Spectrogram or raw waveform", watch: "Domain-specific audio may need fine-tuning" }}
+          ]
+        }}
+      ]
+    }
+  }
+};
+
+const TAB_ORDER = ["supervised","unsupervised","selfsupervised","semisupervised","reinforcement","deeplearning"];
+let activeTab = "supervised";
+
+function renderAnswer(node, color) {
+  return `<div class="answer-card" style="background:linear-gradient(135deg,${color}15,${color}08);border-color:${color}60;">
+    <div class="answer-label" style="color:${color}">→ Use this</div>
+    <div class="answer-name">${node.answer}</div>
+    <div class="answer-why">${node.why}</div>
+    <div class="answer-tags">
+      <span class="tag-scale">${node.scaling}</span>
+      <span class="tag-warn">⚠ ${node.watch}</span>
+    </div>
+  </div>`;
+}
+
+function renderNode(node, color, depth, path) {
+  if (node.answer) return renderAnswer(node, color);
+
+  const qClass = depth === 0 ? "question root" : "question";
+  let html = `<div>
+    <div class="${qClass}" style="border-left:4px solid ${color}">${node.q}</div>
+    <div class="branches">`;
+
+  node.branches.forEach((b, i) => {
+    const id = path + "-" + i;
+    html += `<button class="branch-btn" data-id="${id}" onclick="selectBranch('${id}',${i})" style="border-color:#333340;color:#a0a0b8;">${b.label}</button>`;
+  });
+
+  html += `</div><div id="sub-${path}" class="subtree" style="border-color:${color}40;display:none;"></div></div>`;
+  return html;
+}
+
+const state = {};
+
+function selectBranch(id, index) {
+  const pathParts = id.split("-");
+  const parentPath = pathParts.slice(0, -1).join("-");
+
+  // Deactivate siblings
+  document.querySelectorAll(`[data-id^="${parentPath}-"]`).forEach(btn => {
+    btn.classList.remove("active");
+    btn.style.borderColor = "#333340";
+    btn.style.color = "#a0a0b8";
+    btn.style.background = "#1a1a2e";
+    btn.style.fontWeight = "500";
+  });
+
+  // Activate selected
+  const btn = document.querySelector(`[data-id="${id}"]`);
+  const color = TREES[activeTab].color;
+  btn.classList.add("active");
+  btn.style.borderColor = color;
+  btn.style.color = color;
+  btn.style.background = color + "20";
+  btn.style.fontWeight = "700";
+
+  // Navigate tree to find the node
+  let node = TREES[activeTab].root;
+  const indices = parentPath.split("-").slice(1).filter(x => x !== "").map(Number);
+  indices.forEach(i => { node = node.branches[i].node; });
+  const childNode = node.branches[index].node;
+
+  const subContainer = document.getElementById("sub-" + parentPath);
+  subContainer.style.display = "block";
+  const newPath = parentPath + "-" + index;
+  subContainer.innerHTML = renderNode(childNode, color, indices.length + 1, newPath);
+}
+
+function render() {
+  const tree = TREES[activeTab];
+  const color = tree.color;
+
+  let tabsHtml = TAB_ORDER.map(key => {
+    const t = TREES[key];
+    const isActive = activeTab === key;
+    return `<button class="tab-btn ${isActive ? 'active' : ''}" onclick="switchTab('${key}')" style="border-color:${isActive ? t.color : 'transparent'};background:${isActive ? t.color+'18' : '#12121f'};color:${isActive ? t.color : '#707088'};font-weight:${isActive?700:500}">${t.title}</button>`;
+  }).join("");
+
+  document.getElementById("app").innerHTML = `
+    <div class="header">
+      <h1>ML Algorithm Selector</h1>
+      <p>Click through the decision branches to find your algorithm</p>
+    </div>
+    <div class="tabs">${tabsHtml}</div>
+    <div class="tree-header">
+      <div class="tree-header-row">
+        <div class="tree-dot" style="background:${color};box-shadow:0 0 12px ${color}60"></div>
+        <span class="tree-title">${tree.title}</span>
+      </div>
+      <div class="tree-sub">${tree.subtitle}</div>
+    </div>
+    <div id="tree-content">${renderNode(tree.root, color, 0, "r")}</div>
+    <div class="footer">
+      <div class="footer-title">Quick Gotchas to Remember</div>
+      <div class="footer-text">
+        <strong class="warn">Trees can't extrapolate</strong> — they'll flatline beyond training range. Use Linear Regression for trends + XGBoost for residuals.<br/>
+        <strong class="warn">High dimensions break distance</strong> — always PCA before KNN/K-Means on 1000+ features.<br/>
+        <strong class="warn">Imbalanced classes?</strong> — Accuracy is meaningless. Use F1/PR-AUC. Consider Isolation Forest instead of classification.<br/>
+        <strong class="warn">Must scale for:</strong> Linear Reg, SVM, KNN, Neural Nets, K-Means, PCA. <strong class="info">No scaling:</strong> Trees (RF, XGB, LGBM, CatBoost).
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(tab) { activeTab = tab; render(); }
+
+render();
+</script>
+</body>
+</html>
